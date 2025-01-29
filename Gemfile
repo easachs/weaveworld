@@ -61,6 +61,9 @@ end
 gem "devise"
 gem "faraday"
 gem "view_component"
+gem "omniauth"
+gem "omniauth-google-oauth2"
+gem "omniauth-rails_csrf_protection" # For security
 
 group :development, :test do
   gem "capybara"
