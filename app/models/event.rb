@@ -9,5 +9,5 @@ class Event < ApplicationRecord
 
   validates :description, presence: true
   validates :short, presence: true
-  validates :type, presence: true
+  validates :category, presence: true
 end

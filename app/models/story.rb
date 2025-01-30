@@ -9,4 +9,8 @@ class Story < ApplicationRecord
   validates :title, presence: true
   validates :genre, presence: true
   validates :overview, presence: true
+
+  def hero
+    characters.find_by(role: "user")
+  end
 end

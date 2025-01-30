@@ -1,11 +1,44 @@
-<div class="flex justify-between items-center">
-  <%= tag.h1 'WeaveWorld', class: 'pirata text-4xl' %>
-  
-  <% if user_signed_in? %>
-    <%= button_to destroy_user_session_path,
-                  method: :delete,
-                  class: "btn" do %>
-      Sign Out
+<div class="flex flex-col gap-8">
+  <div class="flex justify-between items-center">
+    <%= tag.h1 'WeaveWorld', class: 'pirata text-4xl' %>
+    
+    <% if user_signed_in? %>
+      <%= button_to destroy_user_session_path,
+                    method: :delete,
+                    class: "btn" do %>
+        Sign Out
+      <% end %>
     <% end %>
+  </div>
+
+  <% if user_signed_in? %>
+    <% if current_user.stories.any? %>
+      <div class="space-y-4">
+        <h2 class="text-2xl">Your Stories</h2>
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <% current_user.stories.each do |story| %>
+            <%= link_to story_path(story), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800" do %>
+              <h3 class="text-xl mb-2"><%= story.title %></h3>
+              <p class="text-gray-400"><%= story.overview %></p>
+              <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded"><%= story.genre %></span>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="mt-8">
+      <h2 class="text-2xl mb-4">Create a New Story</h2>
+      <%= form_with url: stories_path, method: :post, class: "flex gap-4 items-end" do |f| %>
+        <div>
+          <%= f.label :genre, "Genre", class: "block mb-2" %>
+          <%= f.select :genre, 
+                      ["Horror", "Science Fiction", "Fantasy"],
+                      {},
+                      class: "bg-gray-900 rounded px-3 py-2" %>
+        </div>
+        <%= f.submit "Begin New Story", class: "btn" %>
+      <% end %>
+    </div>
   <% end %>
 </div>

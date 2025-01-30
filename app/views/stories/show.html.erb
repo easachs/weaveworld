@@ -1,0 +1,85 @@
+<div class="flex flex-col gap-8">
+  <div class="flex justify-between items-center">
+    <%= link_to root_path, class: "text-gray-400 hover:text-white" do %>
+      ← Back to Stories
+    <% end %>
+
+    <%= button_to story_path(@story),
+                  method: :delete,
+                  class: "btn btn-red",
+                  data: { turbo_confirm: "Are you sure you want to delete this story?" } do %>
+      Delete Story
+    <% end %>
+  </div>
+
+  <div class="space-y-6">
+    <div class="space-y-4">
+      <h1 class="text-3xl"><%= @story.title %></h1>
+      <span class="inline-block px-3 py-1 bg-gray-800 rounded-full text-sm">
+        <%= @story.genre %>
+      </span>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+      <div class="space-y-4">
+        <h2 class="text-2xl">Overview</h2>
+        <p class="text-gray-400"><%= @story.overview %></p>
+      </div>
+
+      <div class="p-4 bg-gray-900 rounded-lg">
+        <% if hero = @story.characters.find_by(role: "user") %>
+          <h2 class="text-2xl mb-4">Your Character</h2>
+          <h3 class="text-xl mb-2"><%= hero.name %></h3>
+          <p class="text-gray-400"><%= hero.description %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-8 md:grid-cols-2">
+    <div class="space-y-4">
+      <h2 class="text-2xl">Characters</h2>
+      <div class="grid gap-4">
+        <% @story.characters.where.not(role: "user").each do |character| %>
+          <div class="p-4 bg-gray-900 rounded-lg">
+            <h3 class="text-xl mb-2"><%= character.name %></h3>
+            <p class="text-gray-400"><%= character.description %></p>
+            <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
+              <%= character.role %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <h2 class="text-2xl">Locations</h2>
+      <div class="grid gap-4">
+        <% @story.locations.each do |location| %>
+          <div class="p-4 bg-gray-900 rounded-lg">
+            <h3 class="text-xl mb-2"><%= location.name %></h3>
+            <p class="text-gray-400"><%= location.description %></p>
+            <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
+              <%= location.category %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-4">
+    <h2 class="text-2xl">Missions</h2>
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <% @story.missions.each do |mission| %>
+        <div class="p-4 bg-gray-900 rounded-lg">
+          <h3 class="text-xl mb-2"><%= mission.name %></h3>
+          <p class="text-gray-400"><%= mission.description %></p>
+          <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
+            <%= mission.status %>
+          </span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div> 
