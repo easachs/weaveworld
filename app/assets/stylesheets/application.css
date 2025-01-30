@@ -8,3 +8,11 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+.pirata {
+    font-family: "Pirata One", serif;
+}
+
+.rosarivo {
+    font-family: "Rosarivo", serif;
+}

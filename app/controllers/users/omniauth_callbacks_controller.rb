@@ -3,7 +3,7 @@ module Users
     skip_before_action :verify_authenticity_token, only: :google_oauth2
 
     def google_oauth2
-      @user = User.from_omniauth(request.env['omniauth.auth'])
+      @user = User.from_omniauth(request.env["omniauth.auth"])
       @user.persisted? ? persisted_user : unpersisted_user
     end
 
@@ -14,7 +14,7 @@ module Users
     end
 
     def unpersisted_user
-      session['devise.google_data'] = request.env['omniauth.auth'].except('extra')
+      session["devise.google_data"] = request.env["omniauth.auth"].except("extra")
       redirect_to new_user_registration_url, alert: @user.errors.full_messages.join("\n")
     end
   end

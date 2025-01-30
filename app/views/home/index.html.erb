@@ -1,1 +1,11 @@
-Welcome to Weaveworld
+<div class="flex justify-between items-center">
+  <%= tag.h1 'WeaveWorld', class: 'pirata text-4xl' %>
+  
+  <% if user_signed_in? %>
+    <%= button_to destroy_user_session_path,
+                  method: :delete,
+                  class: "btn" do %>
+      Sign Out
+    <% end %>
+  <% end %>
+</div>
