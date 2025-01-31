@@ -1,8 +1,8 @@
 class Location < ApplicationRecord
   belongs_to :story
-  has_many :character_locations
+  has_many :character_locations, dependent: :destroy
   has_many :characters, through: :character_locations
-  has_many :location_events
+  has_many :location_events, dependent: :destroy
   has_many :events, through: :location_events
   has_many :mission_locations
   has_many :missions, through: :mission_locations

@@ -18,19 +18,23 @@
       <span class="inline-block px-3 py-1 bg-gray-800 rounded-full text-sm">
         <%= @story.genre %>
       </span>
+      <p class="text-gray-400"><%= @story.overview %></p>
     </div>
 
     <div class="grid gap-6 md:grid-cols-2">
-      <div class="space-y-4">
-        <h2 class="text-2xl">Overview</h2>
-        <p class="text-gray-400"><%= @story.overview %></p>
-      </div>
-
       <div class="p-4 bg-gray-900 rounded-lg">
-        <% if hero = @story.characters.find_by(role: "user") %>
+        <% if hero = @story.hero %>
           <h2 class="text-2xl mb-4">Your Character</h2>
           <h3 class="text-xl mb-2"><%= hero.name %></h3>
           <p class="text-gray-400"><%= hero.description %></p>
+        <% end %>
+      </div>
+
+      <div class="p-4 bg-gray-900 rounded-lg">
+        <% if world = @story.locations.find_by(category: "world") %>
+          <h2 class="text-2xl mb-4">The World</h2>
+          <h3 class="text-xl mb-2"><%= world.name %></h3>
+          <p class="text-gray-400"><%= world.description %></p>
         <% end %>
       </div>
     </div>
@@ -41,13 +45,13 @@
       <h2 class="text-2xl">Characters</h2>
       <div class="grid gap-4">
         <% @story.characters.where.not(role: "user").each do |character| %>
-          <div class="p-4 bg-gray-900 rounded-lg">
+          <%= link_to story_character_path(@story, character), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800" do %>
             <h3 class="text-xl mb-2"><%= character.name %></h3>
             <p class="text-gray-400"><%= character.description %></p>
             <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
               <%= character.role %>
             </span>
-          </div>
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -55,14 +59,14 @@
     <div class="space-y-4">
       <h2 class="text-2xl">Locations</h2>
       <div class="grid gap-4">
-        <% @story.locations.each do |location| %>
-          <div class="p-4 bg-gray-900 rounded-lg">
+        <% @story.locations.where.not(category: "world").each do |location| %>
+          <%= link_to story_location_path(@story, location), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800" do %>
             <h3 class="text-xl mb-2"><%= location.name %></h3>
             <p class="text-gray-400"><%= location.description %></p>
             <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
               <%= location.category %>
             </span>
-          </div>
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -72,14 +76,27 @@
     <h2 class="text-2xl">Missions</h2>
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <% @story.missions.each do |mission| %>
-        <div class="p-4 bg-gray-900 rounded-lg">
+        <%= link_to story_mission_path(@story, mission), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800" do %>
           <h3 class="text-xl mb-2"><%= mission.name %></h3>
           <p class="text-gray-400"><%= mission.description %></p>
           <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
             <%= mission.status %>
           </span>
-        </div>
+        <% end %>
       <% end %>
     </div>
   </div>
-</div> 
+
+  <% if @story.facts.any? %>
+    <div class="space-y-4">
+      <h2 class="text-2xl">Key Facts</h2>
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <% @story.facts.each do |fact| %>
+          <div class="p-4 bg-gray-900 rounded-lg">
+            <p class="text-gray-400"><%= fact.text %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
-  root "home#index"
+  root "stories#index"
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
@@ -18,5 +18,9 @@ Rails.application.routes.draw do
     registrations: "users/registrations"
   }
 
-  resources :stories, only: [ :create, :show, :destroy ]
+  resources :stories, only: [ :index, :create, :show, :destroy ] do
+    resources :characters, only: [ :show ]
+    resources :locations, only: [ :show ]
+    resources :missions, only: [ :show ]
+  end
 end
