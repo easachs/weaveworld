@@ -16,16 +16,23 @@ class StoryContinuationService
     return nil if content.nil?
 
     ActiveRecord::Base.transaction do
-      # Save new content first
+      # Store existing record IDs before saving new content
+      existing_character_ids = @story.characters.pluck(:id)
+      existing_location_ids = @story.locations.pluck(:id)
+      existing_mission_ids = @story.missions.pluck(:id)
+      existing_fact_ids = @story.facts.pluck(:id)
+      existing_event_ids = @story.events.pluck(:id)
+
+      # Save new content
       save_response(content)
       save_summary(content[:summary]) if content[:summary].present?
 
-      # Only if everything saved successfully, mark old records as not new
-      @story.characters.update_all(new: false)
-      @story.locations.update_all(new: false)
-      @story.missions.update_all(new: false)
-      @story.facts.update_all(new: false)
-      @story.events.update_all(new: false)
+      # Only mark existing records as not new
+      @story.characters.where(id: existing_character_ids).update_all(new: false)
+      @story.locations.where(id: existing_location_ids).update_all(new: false)
+      @story.missions.where(id: existing_mission_ids).update_all(new: false)
+      @story.facts.where(id: existing_fact_ids).update_all(new: false)
+      @story.events.where(id: existing_event_ids).update_all(new: false)
     end
 
     {
@@ -174,7 +181,7 @@ class StoryContinuationService
       }.join("\n")}
 
       Recent Events:
-      #{@story.events.order(created_at: :desc).limit(5).map(&:description).join("\n")}
+      #{@story.events.limit(5).map(&:description).join("\n")}
 
       Player Input:
       #{@input}
