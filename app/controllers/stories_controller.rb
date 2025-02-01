@@ -1,18 +1,19 @@
 class StoriesController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_story, only: [ :show, :destroy ]
+  before_action :set_story, only: [ :show, :destroy, :update ]
 
   def index
   end
 
   def create
-    story = StoryStartService.new(
+    result = StoryStartService.new(
       genre: params[:genre],
       user: current_user
     ).start
 
-    if story
-      redirect_to story_path(story)
+    if result
+      session[:choices] = result[:choices]
+      redirect_to story_path(result[:story])
     else
       error_message = find_error_message || "Failed to create story"
       redirect_to root_path, alert: "#{error_message}. Please try again."
@@ -20,6 +21,22 @@ class StoriesController < ApplicationController
   end
 
   def show
+    @choices = session[:choices] || []
+  end
+
+  def update
+    result = StoryContinuationService.new(
+      story: @story,
+      input: params[:input]
+    ).continue
+
+    if result
+      session[:choices] = result[:choices]
+      redirect_to story_path(result[:story])
+    else
+      error_message = find_error_message || "Failed to continue story"
+      redirect_to story_path(@story), alert: "#{error_message}. Please try again."
+    end
   end
 
   def destroy

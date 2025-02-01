@@ -1,5 +1,6 @@
 class Character < ApplicationRecord
   belongs_to :story
+  belongs_to :location, optional: true
   has_many :character_events, dependent: :destroy
   has_many :events, through: :character_events
   has_many :character_locations, dependent: :destroy

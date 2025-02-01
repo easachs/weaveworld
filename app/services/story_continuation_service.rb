@@ -10,132 +10,244 @@ class StoryContinuationService
       prompt: story_prompt
     ).fetch_response
 
-    return if content.nil?
+    # Add logging for AI response
+    Rails.logger.info "AI Response: #{content.inspect}"
 
-    save_response(content)
+    return nil if content.nil?
+
+    ActiveRecord::Base.transaction do
+      # Save new content first
+      save_response(content)
+      save_summary(content[:summary]) if content[:summary].present?
+
+      # Only if everything saved successfully, mark old records as not new
+      @story.characters.update_all(new: false)
+      @story.locations.update_all(new: false)
+      @story.missions.update_all(new: false)
+      @story.facts.update_all(new: false)
+      @story.events.update_all(new: false)
+    end
+
+    {
+      story: @story,
+      choices: content[:choices] || []
+    }
   end
 
   private
 
   def save_response(content)
-    save_characters(content[:new_characters]) if content[:new_characters].present?
-    save_locations(content[:new_locations]) if content[:new_locations].present?
-    save_missions(content[:new_missions]) if content[:new_missions].present?
-    save_events(content[:character_events], :character) if content[:character_events].present?
-    save_events(content[:location_events], :location) if content[:location_events].present?
-    save_events(content[:mission_events], :mission) if content[:mission_events].present?
-    save_items(content[:new_items]) if content[:new_items].present?
-    save_facts(content[:new_facts]) if content[:new_facts].present?
-  end
+    # Create a hash to store new records by their temp_ids
+    temp_id_map = {}
 
-  def save_characters(characters)
-    characters.each { |character| Character.create!(character.merge(story: @story)) }
-  end
+    ActiveRecord::Base.transaction do
+      # First create all new records and store their mappings
+      if content[:new_characters].present?
+        content[:new_characters].each do |char|
+          temp_id = char.delete(:temp_id)
+          record = Character.create!(char.merge(story: @story, new: true))
+          temp_id_map[temp_id] = record if temp_id
+        end
+      end
 
-  def save_locations(locations)
-    locations.each { |location| Location.create!(location.merge(story: @story)) }
-  end
+      if content[:new_locations].present?
+        content[:new_locations].each do |loc|
+          temp_id = loc.delete(:temp_id)
+          record = Location.create!(loc.merge(story: @story, new: true))
+          temp_id_map[temp_id] = record if temp_id
+        end
+      end
 
-  def save_missions(missions)
-    missions.each { |mission| Mission.create!(mission.merge(story: @story)) }
-  end
+      if content[:new_missions].present?
+        content[:new_missions].each do |mission|
+          temp_id = mission.delete(:temp_id)
+          mission[:status] = "not started"
+          record = Mission.create!(mission.merge(story: @story, new: true))
+          temp_id_map[temp_id] = record if temp_id
+        end
+      end
 
-  def save_events(events, category)
-    events.each do |event|
-      case category
-      when :character
-        character = Character.find(event[:character_id])
-        event_record = Event.create!(event.merge(story: @story))
-        CharacterEvent.create!(character:, event: event_record)
-      when :location
-        location = Location.find(event[:location_id])
-        event_record = Event.create!(event.merge(story: @story))
-        LocationEvent.create!(location:, event: event_record)
-      when :mission
-        mission = Mission.find(event[:mission_id])
-        event_record = Event.create!(event.merge(story: @story))
-        MissionEvent.create!(mission:, event: event_record)
+      # Then create events with proper associations
+      if content[:events].present?
+        content[:events].each do |event|
+          # Create the event
+          event_attrs = event.except(:character_ids, :location_ids, :mission_ids,
+                                   :new_character_refs, :new_location_refs, :new_mission_refs)
+          event_record = Event.create!(event_attrs.merge(story: @story))
+
+          # Handle existing record associations
+          event[:character_ids]&.each do |id|
+            character = @story.characters.find(id)
+            CharacterEvent.create!(character: character, event: event_record)
+          end
+
+          event[:location_ids]&.each do |id|
+            location = @story.locations.find(id)
+            LocationEvent.create!(location: location, event: event_record)
+          end
+
+          event[:mission_ids]&.each do |id|
+            mission = @story.missions.find(id)
+            MissionEvent.create!(mission: mission, event: event_record)
+          end
+
+          # Handle new record associations using temp_ids
+          event[:new_character_refs]&.each do |temp_id|
+            if character = temp_id_map[temp_id]
+              CharacterEvent.create!(character: character, event: event_record)
+            end
+          end
+
+          event[:new_location_refs]&.each do |temp_id|
+            if location = temp_id_map[temp_id]
+              LocationEvent.create!(location: location, event: event_record)
+            end
+          end
+
+          event[:new_mission_refs]&.each do |temp_id|
+            if mission = temp_id_map[temp_id]
+              MissionEvent.create!(mission: mission, event: event_record)
+            end
+          end
+
+          # Update character locations based on the event's location
+          if event[:location_ids].present? && event[:character_ids].present?
+            location_id = event[:location_ids].first # Assume the first location is where the action happens
+            @story.characters.where(id: event[:character_ids]).update_all(location_id: location_id)
+          end
+
+          # For new characters, set their initial location
+          event[:new_character_refs]&.each do |temp_id|
+            if character = temp_id_map[temp_id]
+              if event[:location_ids].present?
+                character.update(location_id: event[:location_ids].first)
+              elsif event[:new_location_refs].present? && (location = temp_id_map[event[:new_location_refs].first])
+                character.update(location_id: location.id)
+              end
+            end
+          end
+        end
+      end
+
+      # Save any new facts
+      content[:new_facts]&.each { |fact| Fact.create!(text: fact, story: @story, new: true) }
+
+      # Handle completed missions
+      if content[:completed_mission_ids].present?
+        @story.missions.where(id: content[:completed_mission_ids]).update_all(status: "completed")
       end
     end
   end
 
-  def save_items(items)
-    items.each { |item| Item.create!(item.merge(story: @story)) }
-  end
-
-  def save_facts(facts)
-    facts.each { |fact| Fact.create!(content: fact, story: @story) }
+  def save_summary(summary_text)
+    Summary.create!(text: summary_text, story: @story)
   end
 
   def story_role
     <<~TEXT
-      You are a game master creating a new #{@story.genre} role-playing game titled #{@story.title}. The hero of our
-      story is #{@story.hero}. The overview: #{@story.overview}. Based on the provided information, generate an
-      appropriate JSON response as outlined. If you are unable to generate a response for any reason, return an empty
-      JSON object.
+      You are a game master creating a new #{@story.genre} role-playing game titled #{@story.title}.#{' '}
+      The hero is #{@story.hero.name}: #{@story.hero.description}
+      Overview: #{@story.overview}
+
+      Your role is to continue the story based on the player's input, creating a cohesive narrative that#{' '}
+      builds upon existing elements. Add new characters, locations, missions, or facts ONLY when necessary#{' '}
+      to advance the story naturally. Focus on creating meaningful events and interactions with existing#{' '}
+      story elements whenever possible.
     TEXT
   end
 
   def story_details
     <<~TEXT
-      Facts: #{@story.facts.map(&:content).join("\n")}
-      Missions: #{@story.missions.map { |mission| "#{mission.name}: #{mission.description} (#{mission.status})" }.join("\n")}
-      Locations: #{@story.locations.map { |location| "#{location.name}: #{location.description} (#{location.category}) ID: #{location.id}" }.join("\n")}
-      Characters: #{@story.characters.map { |character| "#{character.name}: #{character.description} (#{character.role}) ID: #{character.id}" }.join("\n")}
-      Items: #{@story.items.map { |item| "#{item.name}: #{item.description} (#{item.category}) ID: #{item.id}" }.join("\n")}
-      Events: #{@story.events.map(&:short).join("\n")}
-      User action: #{@input}
+      World Facts:
+      #{@story.facts.map(&:text).join("\n")}
+
+      Active Missions:
+      #{@story.missions.map { |m| "#{m.name} (#{m.status}): #{m.description} [ID: #{m.id}]" }.join("\n")}
+
+      Key Locations:
+      #{@story.locations.map { |l| "#{l.name} (#{l.category}): #{l.description} [ID: #{l.id}]" }.join("\n")}
+
+      Characters Present:
+      #{@story.characters.map { |c|# {' '}
+        location_info = c.location ? " - Currently at: #{c.location.name}" : " - Location: Unknown"
+        "#{c.name} (#{c.role}): #{c.description}#{location_info} [ID: #{c.id}]"
+      }.join("\n")}
+
+      Recent Events:
+      #{@story.events.order(created_at: :desc).limit(5).map(&:description).join("\n")}
+
+      Player Input:
+      #{@input}
     TEXT
   end
 
   def story_prompt
     <<~TEXT
-      Continue the story based on the following details:
-      Genre: #{@story.genre}
-      Hero: #{@story.hero.name}
-      Overview: #{@story.overview}
-      Details: #{story_details}
-      Character's Actions: #{@input}
+      Continue the story based on these details:
+      #{story_details}
 
-      Generate the next story segment with new events, characters, locations, and missions.
-      Your response must be in valid JSON format with the following structure:
+      Generate the next story segment focusing on direct responses to the player's input.
+      Your response must be valid JSON with this structure:
       {
-        "new_events": [
+        "summary": "Write a detailed narrative summary (3-4 sentences) describing what just happened in the story, including any important changes or revelations",
+        "events": [
           {
-            "description": "Write a detailed event description",
-            "short": "Write a brief summary",
-            "category": "Choose from: combat, dialogue, discovery, travel"
+            "description": "Detailed event description",
+            "short": "Brief summary",
+            "category": "combat/dialogue/discovery/travel",
+            "character_ids": [ids_of_characters_involved],
+            "location_ids": [id_of_location_where_event_occurs],
+            "mission_ids": [related_mission_ids],
+            "new_character_refs": ["temp_id_for_new_character"],
+            "new_location_refs": ["temp_id_for_new_location"],
+            "new_mission_refs": ["temp_id_for_new_mission"]
           }
         ],
         "new_characters": [
           {
-            "name": "Generate NPC name",
-            "description": "Write character description",
-            "role": "Choose from: ally, villain, neutral"
+            "temp_id": "temp_id_used_in_events",
+            "name": "NPC name",
+            "description": "Character description",
+            "role": "ally/villain/neutral"
           }
         ],
         "new_locations": [
           {
-            "name": "Generate location name",
-            "description": "Write location description",
-            "category": "Choose from: city, dungeon, forest, castle, etc"
+            "temp_id": "temp_id_used_in_events",
+            "name": "Location name",
+            "description": "Location description",
+            "category": "city/dungeon/forest/castle/etc"
           }
         ],
         "new_missions": [
           {
-            "name": "Generate mission name",
-            "description": "Write mission description",
-            "status": "Choose from: not_started, active, completed"
+            "temp_id": "temp_id_used_in_events",
+            "name": "Mission name",
+            "description": "Mission description",
+            "status": "not_started"
           }
         ],
         "new_facts": [
-          "Write a new fact about the story world or characters"
+          "New fact about the story world or characters"
+        ],
+        "completed_mission_ids": [
+          "IDs of any missions that should be marked as completed"
+        ],
+        "choices": [
+          "Write a short, specific action the player could take (1-2 sentences)",
+          "Write another distinct action choice",
+          "Write a third distinct action choice"
         ]
       }
 
-      Important: Generate completely new and unique content that advances the story.
-      Create at least 1 event, and optionally include new characters, locations, missions, or facts as the story requires.
-      Make sure all new content fits coherently with the existing story and genre.
+      Important:
+      1. Create events that directly respond to the player's input
+      2. Use existing story elements whenever possible
+      3. Only create new characters, locations, missions, or facts if absolutely necessary
+      4. When creating new elements that need to be referenced in events, use temp_id to connect them
+      5. Mark missions as completed when appropriate via completed_mission_ids
+      6. The summary should be detailed and comprehensive, covering all significant events and changes
+      7. Always include the location where events occur - this tracks character movement
     TEXT
   end
 end

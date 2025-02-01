@@ -4,7 +4,7 @@ class CharactersController < ApplicationController
   before_action :set_character
 
   def show
-    redirect_to story_path(@story) if @character.role == "user"
+    # redirect_to story_path(@story) if @character.role == "user"
   end
 
   private

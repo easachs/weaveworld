@@ -21,54 +21,134 @@
       <p class="text-gray-400"><%= @story.overview %></p>
     </div>
 
+    <% if @story.summaries.any? %>
+      <div class="space-y-4">
+        <% if latest_summary = @story.summaries.order(created_at: :desc).first %>
+          <div class="space-y-2">
+            <h2 class="text-2xl">What Just Happened</h2>
+            <div class="p-4 bg-gray-900 rounded-lg">
+              <p class="text-gray-400"><%= latest_summary.text %></p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="space-y-4">
+      <h2 class="text-2xl">What would you like to do?</h2>
+      
+      <%= form_with url: story_path(@story), method: :patch, class: "space-y-4" do |f| %>
+        <div>
+          <%= f.text_area :input, 
+              class: "w-full bg-gray-900 rounded px-3 py-2",
+              style: "height: 100px; min-height: 100px; max-height: 100px;",
+              placeholder: "Describe your actions, thoughts, or intentions..." %>
+        </div>
+        <%= f.submit "Continue Story", class: "btn" %>
+      <% end %>
+
+      <% if @choices.any? %>
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <% @choices.each do |choice| %>
+            <%= button_to story_path(@story),
+                        method: :patch,
+                        params: { input: choice },
+                        class: "p-4 bg-gray-900 hover:bg-gray-800 rounded-lg text-left" do %>
+              <%= choice %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
     <div class="grid gap-6 md:grid-cols-2">
-      <div class="p-4 bg-gray-900 rounded-lg">
+      <div class="space-y-4">
+        <h2 class="text-2xl">Your Character</h2>
         <% if hero = @story.hero %>
-          <h2 class="text-2xl mb-4">Your Character</h2>
-          <h3 class="text-xl mb-2"><%= hero.name %></h3>
-          <p class="text-gray-400"><%= hero.description %></p>
+          <%= link_to story_character_path(@story, hero), class: "block p-4 bg-gray-900 hover:bg-gray-800 rounded-lg" do %>
+            <h3 class="text-xl mb-2"><%= hero.name %></h3>
+            <p class="text-gray-400"><%= hero.description %></p>
+          <% end %>
         <% end %>
       </div>
 
-      <div class="p-4 bg-gray-900 rounded-lg">
+      <div class="space-y-4">
+        <h2 class="text-2xl">The World</h2>
         <% if world = @story.locations.find_by(category: "world") %>
-          <h2 class="text-2xl mb-4">The World</h2>
-          <h3 class="text-xl mb-2"><%= world.name %></h3>
-          <p class="text-gray-400"><%= world.description %></p>
+          <%= link_to story_location_path(@story, world), class: "block p-4 bg-gray-900 hover:bg-gray-800 rounded-lg" do %>
+            <h3 class="text-xl mb-2"><%= world.name %></h3>
+            <p class="text-gray-400"><%= world.description %></p>
+          <% end %>
         <% end %>
       </div>
     </div>
+
+    <% if @story.events.any? %>
+      <div class="space-y-4">
+        <h2 class="text-2xl">Recent Events</h2>
+        <div class="space-y-4">
+          <% @story.events.order(created_at: :asc).each do |event| %>
+            <div class="p-4 bg-gray-900 rounded-lg">
+              <p class="text-gray-400"><%= event.description %></p>
+              <div class="mt-2 flex gap-2">
+                <span class="inline-block px-2 py-1 text-sm bg-gray-800 rounded">
+                  <%= event.category %>
+                </span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
   </div>
 
-  <div class="grid gap-8 md:grid-cols-2">
-    <div class="space-y-4">
-      <h2 class="text-2xl">Characters</h2>
-      <div class="grid gap-4">
-        <% @story.characters.where.not(role: "user").each do |character| %>
-          <%= link_to story_character_path(@story, character), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800" do %>
+  <div class="space-y-4">
+    <h2 class="text-2xl">Characters</h2>
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <% @story.characters.where.not(role: "user").each do |character| %>
+        <%= link_to story_character_path(@story, character), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800 relative" do %>
+          <div class="flex gap-2 absolute top-2 right-2">
+            <% if character.new? %>
+              <span class="inline-block w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></span>
+            <% end %>
+            <% if character.events.where(new: true).exists? %>
+              <span class="inline-block w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+            <% end %>
+          </div>
+          <div>
             <h3 class="text-xl mb-2"><%= character.name %></h3>
             <p class="text-gray-400"><%= character.description %></p>
             <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
               <%= character.role %>
             </span>
-          <% end %>
+          </div>
         <% end %>
-      </div>
+      <% end %>
     </div>
+  </div>
 
-    <div class="space-y-4">
-      <h2 class="text-2xl">Locations</h2>
-      <div class="grid gap-4">
-        <% @story.locations.where.not(category: "world").each do |location| %>
-          <%= link_to story_location_path(@story, location), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800" do %>
+  <div class="space-y-4">
+    <h2 class="text-2xl">Locations</h2>
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <% @story.locations.where.not(category: "world").each do |location| %>
+        <%= link_to story_location_path(@story, location), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800 relative" do %>
+          <div class="flex gap-2 absolute top-2 right-2">
+            <% if location.new? %>
+              <span class="inline-block w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></span>
+            <% end %>
+            <% if location.events.where(new: true).exists? %>
+              <span class="inline-block w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+            <% end %>
+          </div>
+          <div>
             <h3 class="text-xl mb-2"><%= location.name %></h3>
             <p class="text-gray-400"><%= location.description %></p>
             <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
               <%= location.category %>
             </span>
-          <% end %>
+          </div>
         <% end %>
-      </div>
+      <% end %>
     </div>
   </div>
 
@@ -76,12 +156,22 @@
     <h2 class="text-2xl">Missions</h2>
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <% @story.missions.each do |mission| %>
-        <%= link_to story_mission_path(@story, mission), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800" do %>
-          <h3 class="text-xl mb-2"><%= mission.name %></h3>
-          <p class="text-gray-400"><%= mission.description %></p>
-          <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
-            <%= mission.status %>
-          </span>
+        <%= link_to story_mission_path(@story, mission), class: "p-4 bg-gray-900 rounded-lg hover:bg-gray-800 relative" do %>
+          <div class="flex gap-2 absolute top-2 right-2">
+            <% if mission.new? %>
+              <span class="inline-block w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></span>
+            <% end %>
+            <% if mission.events.where(new: true).exists? %>
+              <span class="inline-block w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+            <% end %>
+          </div>
+          <div>
+            <h3 class="text-xl mb-2"><%= mission.name %></h3>
+            <p class="text-gray-400"><%= mission.description %></p>
+            <span class="mt-2 inline-block px-2 py-1 text-sm bg-gray-800 rounded">
+              <%= mission.status %>
+            </span>
+          </div>
         <% end %>
       <% end %>
     </div>
@@ -93,8 +183,27 @@
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <% @story.facts.each do |fact| %>
           <div class="p-4 bg-gray-900 rounded-lg">
+            <% if fact.new? %>
+              <div class="float-right ml-2 mb-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></span>
+              </div>
+            <% end %>
             <p class="text-gray-400"><%= fact.text %></p>
           </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @story.summaries.any? %>
+    <div class="space-y-4">
+      <h2 class="text-2xl">The Story So Far</h2>
+      <div class="p-4 bg-gray-900 rounded-lg space-y-4">
+        <% @story.summaries.order(created_at: :desc).each do |summary| %>
+          <p class="text-gray-400"><%= summary.text %></p>
+          <% unless summary == @story.summaries.order(created_at: :desc).last %>
+            <hr class="border-gray-800">
+          <% end %>
         <% end %>
       </div>
     </div>

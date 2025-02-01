@@ -1,24 +1,36 @@
 <div class="flex flex-col gap-8">
   <div class="flex justify-between items-center">
-    <%= link_to root_path, class: "text-gray-400 hover:text-white" do %>
-      ← Back to Stories
+    <%= link_to story_path(@story), class: "text-gray-400 hover:text-white" do %>
+      ← Back to Story
     <% end %>
   </div>
 
   <div class="space-y-6">
-    <div class="p-6 bg-gray-900 rounded-lg">
-      <h1 class="text-3xl mb-4"><%= @mission.name %></h1>
-      <p class="text-gray-400 mb-4"><%= @mission.description %></p>
-      <span class="inline-block px-3 py-1 bg-gray-800 rounded-full text-sm">
-        <%= @mission.status %>
-      </span>
+    <div class="p-6 bg-gray-900 rounded-lg relative">
+      <div class="flex gap-2 absolute top-2 right-2">
+        <% if @mission.new? %>
+          <span class="inline-block w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></span>
+        <% end %>
+        <% if @mission.events.where(new: true).exists? %>
+          <span class="inline-block w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+        <% end %>
+      </div>
+      <div class="flex justify-between items-start">
+        <div>
+          <h1 class="text-3xl mb-4"><%= @mission.name %></h1>
+          <p class="text-gray-400 mb-4"><%= @mission.description %></p>
+          <span class="inline-block px-3 py-1 bg-gray-800 rounded-full text-sm">
+            <%= @mission.status %>
+          </span>
+        </div>
+      </div>
     </div>
 
     <% if @mission.events.any? %>
       <div class="space-y-4">
         <h2 class="text-2xl">Events</h2>
         <div class="grid gap-4">
-          <% @mission.events.order(created_at: :desc).each do |event| %>
+          <% @mission.events.order(created_at: :asc).each do |event| %>
             <div class="p-4 bg-gray-900 rounded-lg">
               <p class="text-gray-400 mb-2"><%= event.description %></p>
               <span class="inline-block px-2 py-1 text-sm bg-gray-800 rounded">

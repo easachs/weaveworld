@@ -10,9 +10,18 @@ class StoryStartService
       prompt: start_prompt
     ).fetch_response
 
-    return if content.nil?
+    # Add logging for AI response
+    Rails.logger.info "AI Response: #{content.inspect}"
 
-    save_start(content)
+    return nil if content.nil?
+
+    story = save_start(content)
+    return nil if story.nil?
+
+    {
+      story: story,
+      choices: content[:choices] || []
+    }
   end
 
   private
@@ -38,6 +47,8 @@ class StoryStartService
       save_missions(content[:new_missions], story) if content[:new_missions].present?
       save_facts(content[:new_facts], story) if content[:new_facts].present?
 
+      Summary.create!(text: story.overview, story: story)
+
       story
     end
   rescue ActiveRecord::RecordInvalid => e
@@ -59,7 +70,7 @@ class StoryStartService
 
   def save_missions(missions, story)
     missions.each do |mission|
-      mission[:status] = "not started" # Ensure all missions start as not started
+      mission[:status] = "not started"
       Mission.create!(mission.merge(story: story))
     end
   end
@@ -125,6 +136,11 @@ class StoryStartService
         ],
         "new_facts": [
           "Write an important fact about the story world, its history, or key elements"
+        ],
+        "choices": [
+          "Write a short, specific action the player could take (1-2 sentences)",
+          "Write another distinct action choice",
+          "Write a third distinct action choice"
         ]
       }
 

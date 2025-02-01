@@ -5,6 +5,7 @@ class Story < ApplicationRecord
   has_many :facts, dependent: :destroy
   has_many :locations, dependent: :destroy
   has_many :missions, dependent: :destroy
+  has_many :summaries, dependent: :destroy
 
   validates :title, presence: true
   validates :genre, presence: true
