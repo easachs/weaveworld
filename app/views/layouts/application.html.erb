@@ -28,6 +28,18 @@
   </head>
 
   <body class="h-full bg-black text-gray-100 rosarivo">
+    <% if flash[:alert].present? %>
+      <div class="bg-red-900 text-white px-4 py-3" role="alert">
+        <p class="max-w-7xl mx-auto"><%= flash[:alert] %></p>
+      </div>
+    <% end %>
+
+    <% if flash[:notice].present? %>
+      <div class="bg-blue-900 text-white px-4 py-3" role="alert">
+        <p class="max-w-7xl mx-auto"><%= flash[:notice] %></p>
+      </div>
+    <% end %>
+    
     <main class="container mx-auto p-5">
       <%= yield %>
     </main>

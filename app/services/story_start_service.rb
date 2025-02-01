@@ -11,6 +11,7 @@ class StoryStartService
     ).fetch_response
 
     # Add logging for AI response
+    Rails.logger.info "AI Request: #{start_prompt}"
     Rails.logger.info "AI Response: #{content.inspect}"
 
     return nil if content.nil?

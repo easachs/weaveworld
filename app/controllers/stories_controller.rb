@@ -16,7 +16,8 @@ class StoriesController < ApplicationController
       redirect_to story_path(result[:story])
     else
       error_message = find_error_message || "Failed to create story"
-      redirect_to root_path, alert: "#{error_message}. Please try again."
+      flash[:alert] = error_message
+      redirect_to root_path
     end
   end
 
@@ -35,13 +36,15 @@ class StoriesController < ApplicationController
       redirect_to story_path(result[:story])
     else
       error_message = find_error_message || "Failed to continue story"
-      redirect_to story_path(@story), alert: "#{error_message}. Please try again."
+      flash[:alert] = error_message
+      redirect_to story_path(@story)
     end
   end
 
   def destroy
     @story.destroy
-    redirect_to root_path, notice: "Story deleted successfully"
+    flash[:notice] = "Story deleted successfully"
+    redirect_to root_path
   end
 
   private

@@ -64,6 +64,7 @@ gem "view_component"
 gem "omniauth"
 gem "omniauth-google-oauth2"
 gem "omniauth-rails_csrf_protection" # For security
+gem "kaminari"
 
 group :development, :test do
   gem "capybara"
